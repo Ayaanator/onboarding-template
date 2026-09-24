@@ -49,15 +49,16 @@ void apply_stencil(const Grid& old_grid, Grid& new_grid) {
   const double* __restrict in = old_grid.data();
   double* __restrict out = new_grid.data();
 
+  const std::ptrdiff_t row_end = static_cast<std::ptrdiff_t>(rows) - 1;
   #pragma omp parallel for schedule(static)
-  for(std::size_t i = 1; i + 1 < rows; i++) {
+  for(std::ptrdiff_t i = 1; i < row_end; i++) {
 
     const double* row_up = in + (i - 1) * stride;
     const double* row_center = in + i * stride;
     const double* row_down = in + (i + 1) * stride;
     double* out_row = out + i * stride;
 
-    #pragma omp simd
+    // #pragma omp simd
     for(std::size_t j = 1; j  + 1 < cols; j++) {
       out_row[j] = 0.5 * row_center[j] +
       0.125 * (row_up[j] + row_down[j] + row_center[j - 1] + row_center[j + 1]);
