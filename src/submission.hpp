@@ -31,6 +31,9 @@ public:
     return data_[i * stride_ + j];
   }
 
+  double* data() { return data_.data(); }
+  const double* data() const { return data_.data(); }
+
   std::size_t get_rows() const { return rows_; }
   std::size_t get_cols() const { return cols_; }
   std::size_t get_stride() const { return stride_; }
@@ -41,22 +44,37 @@ public:
 void apply_stencil(const Grid& old_grid, Grid& new_grid) {
   std::size_t rows = old_grid.get_rows();
   std::size_t cols = old_grid.get_cols();
+  std::size_t stride = old_grid.get_stride();
 
+  const double* __restrict in = old_grid.data();
+  double* __restrict out = new_grid.data();
+
+  #pragma omp parallel for schedule(static)
   for(std::size_t i = 1; i + 1 < rows; i++) {
+
+    const double* row_up = in + (i - 1) * stride;
+    const double* row_center = in + i * stride;
+    const double* row_down = in + (i + 1) * stride;
+    double* out_row = out + i * stride;
+
+    #pragma omp simd
     for(std::size_t j = 1; j  + 1 < cols; j++) {
-      new_grid(i, j) = 0.5 * old_grid(i, j) +
-        0.125 * (old_grid(i - 1, j) + old_grid(i + 1, j) +
-          old_grid(i, j - 1) + old_grid(i, j + 1));
+      out_row[j] = 0.5 * row_center[j] +
+      0.125 * (row_up[j] + row_down[j] + row_center[j - 1] + row_center[j + 1]);
     }
   }
 
-  for (std::size_t j = 0; j < cols; j++) {
-    new_grid(0, j) = old_grid(0, j);
-    new_grid(rows - 1, j) = old_grid(rows - 1, j);
+  if(rows > 0) {
+    for (std::size_t j = 0; j < cols; j++) {
+      new_grid(0, j) = old_grid(0, j);
+      new_grid(rows - 1, j) = old_grid(rows - 1, j);
+    }
   }
 
-  for (std::size_t i = 0; i < rows; i++) {
-    new_grid(i, 0) = old_grid(i, 0);
-    new_grid(i, cols - 1) = old_grid(i, cols - 1);
+  if(cols > 0) {
+    for (std::size_t i = 0; i < rows; i++) {
+      new_grid(i, 0) = old_grid(i, 0);
+      new_grid(i, cols - 1) = old_grid(i, cols - 1);
+    }
   }
 }
