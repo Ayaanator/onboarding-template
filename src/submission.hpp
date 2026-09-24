@@ -58,7 +58,6 @@ void apply_stencil(const Grid& old_grid, Grid& new_grid) {
     const double* row_down = in + (i + 1) * stride;
     double* out_row = out + i * stride;
 
-    // #pragma omp simd
     for(std::size_t j = 1; j  + 1 < cols; j++) {
       out_row[j] = 0.5 * row_center[j] +
       0.125 * (row_up[j] + row_down[j] + row_center[j - 1] + row_center[j + 1]);
